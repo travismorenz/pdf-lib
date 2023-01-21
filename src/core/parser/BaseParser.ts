@@ -1,5 +1,5 @@
 import { NumberParsingError } from 'src/core/errors';
-import ByteStream from 'src/core/parser/ByteStream';
+import { IByteStream } from 'src/core/parser/ByteStream';
 import CharCodes from 'src/core/syntax/CharCodes';
 import { IsDigit, IsNumeric } from 'src/core/syntax/Numeric';
 import { IsWhitespace } from 'src/core/syntax/Whitespace';
@@ -9,10 +9,10 @@ const { Newline, CarriageReturn } = CharCodes;
 
 // TODO: Throw error if eof is reached before finishing object parse...
 class BaseParser {
-  protected readonly bytes: ByteStream;
+  protected readonly bytes: IByteStream;
   protected readonly capNumbers: boolean;
 
-  constructor(bytes: ByteStream, capNumbers = false) {
+  constructor(bytes: IByteStream, capNumbers = false) {
     this.bytes = bytes;
     this.capNumbers = capNumbers;
   }

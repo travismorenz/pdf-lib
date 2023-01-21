@@ -1,7 +1,7 @@
 import Embeddable from 'src/api/Embeddable';
 import PDFDocument from 'src/api/PDFDocument';
 import FileEmbedder from 'src/core/embedders/FileEmbedder';
-import { PDFName, PDFArray, PDFDict, PDFHexString, PDFRef } from 'src/core';
+import { PDFName, PDFArray, PDFDict, PDFHexString, PDFRef, PDFContext } from 'src/core';
 
 /**
  * Represents a file that has been embedded in a [[PDFDocument]].
@@ -45,25 +45,25 @@ export default class PDFEmbeddedFile implements Embeddable {
    *
    * @returns Resolves when the embedding is complete.
    */
-  async embed(): Promise<void> {
+  async embed(context: PDFContext): Promise<void> {
     if (!this.alreadyEmbedded) {
       const ref = await this.embedder.embedIntoContext(
-        this.doc.context,
+        context,
         this.ref,
       );
 
       if (!this.doc.catalog.has(PDFName.of('Names'))) {
-        this.doc.catalog.set(PDFName.of('Names'), this.doc.context.obj({}));
+        this.doc.catalog.set(PDFName.of('Names'), context.obj({}));
       }
       const Names = this.doc.catalog.lookup(PDFName.of('Names'), PDFDict);
 
       if (!Names.has(PDFName.of('EmbeddedFiles'))) {
-        Names.set(PDFName.of('EmbeddedFiles'), this.doc.context.obj({}));
+        Names.set(PDFName.of('EmbeddedFiles'), context.obj({}));
       }
       const EmbeddedFiles = Names.lookup(PDFName.of('EmbeddedFiles'), PDFDict);
 
       if (!EmbeddedFiles.has(PDFName.of('Names'))) {
-        EmbeddedFiles.set(PDFName.of('Names'), this.doc.context.obj([]));
+        EmbeddedFiles.set(PDFName.of('Names'), context.obj([]));
       }
       const EFNames = EmbeddedFiles.lookup(PDFName.of('Names'), PDFArray);
 
@@ -79,7 +79,7 @@ export default class PDFEmbeddedFile implements Embeddable {
        */
 
       if (!this.doc.catalog.has(PDFName.of('AF'))) {
-        this.doc.catalog.set(PDFName.of('AF'), this.doc.context.obj([]));
+        this.doc.catalog.set(PDFName.of('AF'), context.obj([]));
       }
       const AF = this.doc.catalog.lookup(PDFName.of('AF'), PDFArray);
       AF.push(ref);

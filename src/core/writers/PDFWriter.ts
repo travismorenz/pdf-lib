@@ -12,7 +12,7 @@ import { copyStringIntoBuffer, waitForTick } from 'src/utils';
 
 export interface SerializationInfo {
   size: number;
-  header: PDFHeader;
+  header?: PDFHeader;
   indirectObjects: [PDFRef, PDFObject][];
   xref?: PDFCrossRefSection;
   trailerDict?: PDFTrailerDict;
@@ -20,20 +20,22 @@ export interface SerializationInfo {
 }
 
 class PDFWriter {
-  static forContext = (context: PDFContext, objectsPerTick: number) =>
-    new PDFWriter(context, objectsPerTick);
+  static forContext = (context: PDFContext, objectsPerTick: number, writeHeader: boolean = true) =>
+    new PDFWriter(context, objectsPerTick, writeHeader);
 
   protected readonly context: PDFContext;
 
   protected readonly objectsPerTick: number;
+  protected readonly writeHeader: boolean;
   private parsedObjects = 0;
 
-  protected constructor(context: PDFContext, objectsPerTick: number) {
+  protected constructor(context: PDFContext, objectsPerTick: number, writeHeader: boolean) {
     this.context = context;
     this.objectsPerTick = objectsPerTick;
+    this.writeHeader = writeHeader;
   }
 
-  async serializeToBuffer(): Promise<Uint8Array> {
+  async serializeToBuffer(baseOffset: number = 0): Promise<Uint8Array> {
     const {
       size,
       header,
@@ -41,14 +43,16 @@ class PDFWriter {
       xref,
       trailerDict,
       trailer,
-    } = await this.computeBufferSize();
+    } = await this.computeBufferSize(baseOffset);
 
     let offset = 0;
     const buffer = new Uint8Array(size);
 
-    offset += header.copyBytesInto(buffer, offset);
-    buffer[offset++] = CharCodes.Newline;
-    buffer[offset++] = CharCodes.Newline;
+    if (header) {
+      offset += header.copyBytesInto(buffer, offset);
+      buffer[offset++] = CharCodes.Newline;
+      buffer[offset++] = CharCodes.Newline;
+    }
 
     for (let idx = 0, len = indirectObjects.length; idx < len; idx++) {
       const [ref, object] = indirectObjects[idx];
@@ -118,10 +122,13 @@ class PDFWriter {
     });
   }
 
-  protected async computeBufferSize(): Promise<SerializationInfo> {
-    const header = PDFHeader.forVersion(1, 7);
-
-    let size = header.sizeInBytes() + 2;
+  protected async computeBufferSize(baseOffset: number): Promise<SerializationInfo> {
+    let header: PDFHeader | undefined;
+    let size = baseOffset;
+    if (this.writeHeader) {
+      header = PDFHeader.forVersion(1, 7);
+      size += header.sizeInBytes() + 2;
+    }
 
     const xref = PDFCrossRefSection.create();
 

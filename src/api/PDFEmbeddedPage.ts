@@ -1,6 +1,6 @@
 import Embeddable from 'src/api/Embeddable';
 import PDFDocument from 'src/api/PDFDocument';
-import { PDFPageEmbedder, PDFRef } from 'src/core';
+import { PDFContext, PDFPageEmbedder, PDFRef } from 'src/core';
 import { assertIs } from 'src/utils';
 
 /**
@@ -95,9 +95,9 @@ export default class PDFEmbeddedPage implements Embeddable {
    *
    * @returns Resolves when the embedding is complete.
    */
-  async embed(): Promise<void> {
+  async embed(context: PDFContext): Promise<void> {
     if (!this.alreadyEmbedded) {
-      await this.embedder.embedIntoContext(this.doc.context, this.ref);
+      await this.embedder.embedIntoContext(context, this.ref);
       this.alreadyEmbedded = true;
     }
   }

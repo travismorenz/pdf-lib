@@ -1,7 +1,7 @@
 import Embeddable from 'src/api/Embeddable';
 import PDFDocument from 'src/api/PDFDocument';
 import JavaScriptEmbedder from 'src/core/embedders/JavaScriptEmbedder';
-import { PDFName, PDFArray, PDFDict, PDFHexString, PDFRef } from 'src/core';
+import { PDFName, PDFArray, PDFDict, PDFHexString, PDFRef, PDFContext } from 'src/core';
 
 /**
  * Represents JavaScript that has been embedded in a [[PDFDocument]].
@@ -49,7 +49,7 @@ export default class PDFJavaScript implements Embeddable {
    *
    * @returns Resolves when the embedding is complete.
    */
-  async embed(): Promise<void> {
+  async embed(_context: PDFContext): Promise<void> {
     if (!this.alreadyEmbedded) {
       const { catalog, context } = this.doc;
 

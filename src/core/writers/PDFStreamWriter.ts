@@ -18,12 +18,14 @@ class PDFStreamWriter extends PDFWriter {
     objectsPerTick: number,
     encodeStreams = true,
     objectsPerStream = 50,
+    writeHeader = true,
   ) =>
     new PDFStreamWriter(
       context,
       objectsPerTick,
       encodeStreams,
       objectsPerStream,
+      writeHeader,
     );
 
   private readonly encodeStreams: boolean;
@@ -34,8 +36,9 @@ class PDFStreamWriter extends PDFWriter {
     objectsPerTick: number,
     encodeStreams: boolean,
     objectsPerStream: number,
+    writeHeader: boolean,
   ) {
-    super(context, objectsPerTick);
+    super(context, objectsPerTick, writeHeader);
 
     this.encodeStreams = encodeStreams;
     this.objectsPerStream = objectsPerStream;

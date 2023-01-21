@@ -17,7 +17,7 @@ describe(`PDFImage`, () => {
 
       const embedderVariable = 'embedder';
       expect(pdfImage[embedderVariable]).toBeDefined();
-      await pdfImage.embed();
+      await pdfImage.embed(pdfDoc.context);
       expect(pdfImage[embedderVariable]).toBeUndefined();
     });
 
@@ -29,8 +29,8 @@ describe(`PDFImage`, () => {
       const ref = pdfDoc.context.nextRef();
       const pdfImage = PDFImage.of(ref, pdfDoc, embedder);
 
-      await expect(pdfImage.embed()).resolves.not.toThrowError();
-      await expect(pdfImage.embed()).resolves.not.toThrowError();
+      await expect(pdfImage.embed(pdfDoc.context)).resolves.not.toThrowError();
+      await expect(pdfImage.embed(pdfDoc.context)).resolves.not.toThrowError();
     });
 
     it(`may be called in parallel without causing an error`, async () => {
@@ -46,10 +46,10 @@ describe(`PDFImage`, () => {
 
       expect(task()).toBeUndefined();
 
-      const task1 = pdfImage.embed();
+      const task1 = pdfImage.embed(pdfDoc.context);
       const firstTask = task();
 
-      const task2 = pdfImage.embed();
+      const task2 = pdfImage.embed(pdfDoc.context);
       const secondTask = task();
 
       await Promise.all([task1, task2]);

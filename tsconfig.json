@@ -15,7 +15,7 @@
     "tsBuildInfoFile": "./tsBuildInfo.json",
     "removeComments": false,
     "importHelpers": true,
-    "downlevelIteration": false,
+    "downlevelIteration": true,
     "isolatedModules": false,
     "newLine": "LF",
 
@@ -23,8 +23,8 @@
     "strict": true,
 
     /* Additional Checks */
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
 

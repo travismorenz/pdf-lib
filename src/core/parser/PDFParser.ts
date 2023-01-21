@@ -14,7 +14,7 @@ import PDFName from 'src/core/objects/PDFName';
 import PDFObject from 'src/core/objects/PDFObject';
 import PDFRawStream from 'src/core/objects/PDFRawStream';
 import PDFRef from 'src/core/objects/PDFRef';
-import ByteStream from 'src/core/parser/ByteStream';
+import ByteStream, { IByteStream } from 'src/core/parser/ByteStream';
 import PDFObjectParser from 'src/core/parser/PDFObjectParser';
 import PDFObjectStreamParser from 'src/core/parser/PDFObjectStreamParser';
 import PDFXRefStreamParser from 'src/core/parser/PDFXRefStreamParser';
@@ -31,7 +31,15 @@ class PDFParser extends PDFObjectParser {
     throwOnInvalidObject?: boolean,
     capNumbers?: boolean,
   ) =>
-    new PDFParser(pdfBytes, objectsPerTick, throwOnInvalidObject, capNumbers);
+    new PDFParser(ByteStream.of(pdfBytes), PDFContext.create(), objectsPerTick, throwOnInvalidObject, capNumbers);
+
+  static forByteStreamWithOptions = (
+    byteStream: IByteStream,
+    context: PDFContext,
+    objectsPerTick?: number,
+    throwOnInvalidObject?: boolean,
+    capNumbers?: boolean,
+  ) => new PDFParser(byteStream, context, objectsPerTick, throwOnInvalidObject, capNumbers);
 
   private readonly objectsPerTick: number;
   private readonly throwOnInvalidObject: boolean;
@@ -39,12 +47,13 @@ class PDFParser extends PDFObjectParser {
   private parsedObjects = 0;
 
   constructor(
-    pdfBytes: Uint8Array,
+    byteStream: IByteStream,
+    context: PDFContext,
     objectsPerTick = Infinity,
     throwOnInvalidObject = false,
     capNumbers = false,
   ) {
-    super(ByteStream.of(pdfBytes), PDFContext.create(), capNumbers);
+    super(byteStream, context, capNumbers);
     this.objectsPerTick = objectsPerTick;
     this.throwOnInvalidObject = throwOnInvalidObject;
   }
@@ -111,7 +120,7 @@ class PDFParser extends PDFObjectParser {
     throw new MissingPDFHeaderError(this.bytes.position());
   }
 
-  private parseIndirectObjectHeader(): PDFRef {
+  /*private*/ parseIndirectObjectHeader(): PDFRef {
     this.skipWhitespaceAndComments();
     const objectNumber = this.parseRawInt();
 
@@ -232,7 +241,7 @@ class PDFParser extends PDFObjectParser {
     }
   }
 
-  private maybeParseCrossRefSection(): PDFCrossRefSection | void {
+  /*private*/ maybeParseCrossRefSection(): PDFCrossRefSection | void {
     this.skipWhitespaceAndComments();
     if (!this.matchKeyword(Keywords.xref)) return;
     this.skipWhitespaceAndComments();
@@ -266,12 +275,17 @@ class PDFParser extends PDFObjectParser {
     return xref;
   }
 
-  private maybeParseTrailerDict(): void {
+  maybeParseTrailerPDFDict() {
     this.skipWhitespaceAndComments();
     if (!this.matchKeyword(Keywords.trailer)) return;
     this.skipWhitespaceAndComments();
 
-    const dict = this.parseDict();
+    return this.parseDict();
+  }
+
+  private maybeParseTrailerDict(): void {
+    const dict = this.maybeParseTrailerPDFDict();
+    if (!dict) return;
 
     const { context } = this;
     context.trailerInfo = {
@@ -282,7 +296,7 @@ class PDFParser extends PDFObjectParser {
     };
   }
 
-  private maybeParseTrailer(): PDFTrailer | void {
+  /*private*/ maybeParseTrailer(): PDFTrailer | void {
     this.skipWhitespaceAndComments();
     if (!this.matchKeyword(Keywords.startxref)) return;
     this.skipWhitespaceAndComments();

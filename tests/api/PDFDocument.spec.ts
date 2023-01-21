@@ -481,7 +481,7 @@ describe(`PDFDocument`, () => {
       const noErrorFunc = async () => {
         const embeddedImage = await pdfDoc.embedPng(examplePngImage);
         pdfPage.drawImage(embeddedImage);
-        await embeddedImage.embed();
+        await embeddedImage.embed(pdfDoc.context);
 
         const pdfPage2 = pdfDoc.addPage();
         pdfPage2.drawImage(embeddedImage);

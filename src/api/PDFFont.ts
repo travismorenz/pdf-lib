@@ -1,7 +1,7 @@
 import Embeddable from 'src/api//Embeddable';
-import PDFDocument from 'src/api/PDFDocument';
 import {
   CustomFontEmbedder,
+  PDFContext,
   PDFHexString,
   PDFRef,
   StandardFontEmbedder,
@@ -26,14 +26,11 @@ export default class PDFFont implements Embeddable {
    * @param doc The document to which the font will belong.
    * @param embedder The embedder that will be used to embed the font.
    */
-  static of = (ref: PDFRef, doc: PDFDocument, embedder: FontEmbedder) =>
-    new PDFFont(ref, doc, embedder);
+  static of = (ref: PDFRef, /* doc: PDFDocument,*/ embedder: FontEmbedder) =>
+    new PDFFont(ref, embedder);
 
   /** The unique reference assigned to this font within the document. */
   readonly ref: PDFRef;
-
-  /** The document to which this font belongs. */
-  readonly doc: PDFDocument;
 
   /** The name of this font. */
   readonly name: string;
@@ -41,16 +38,15 @@ export default class PDFFont implements Embeddable {
   private modified = true;
   private readonly embedder: FontEmbedder;
 
-  private constructor(ref: PDFRef, doc: PDFDocument, embedder: FontEmbedder) {
+  private constructor(ref: PDFRef, /* doc: PDFDocument,*/ embedder: FontEmbedder) {
     assertIs(ref, 'ref', [[PDFRef, 'PDFRef']]);
-    assertIs(doc, 'doc', [[PDFDocument, 'PDFDocument']]);
+    // assertIs(doc, 'doc', [[PDFDocument, 'PDFDocument']]);
     assertIs(embedder, 'embedder', [
       [CustomFontEmbedder, 'CustomFontEmbedder'],
       [StandardFontEmbedder, 'StandardFontEmbedder'],
     ]);
 
     this.ref = ref;
-    this.doc = doc;
     this.name = embedder.fontName;
 
     this.embedder = embedder;
@@ -144,10 +140,10 @@ export default class PDFFont implements Embeddable {
    *
    * @returns Resolves when the embedding is complete.
    */
-  async embed(): Promise<void> {
+  async embed(context: PDFContext): Promise<void> {
     // TODO: Cleanup orphan embedded objects if a font is embedded multiple times...
     if (this.modified) {
-      await this.embedder.embedIntoContext(this.doc.context, this.ref);
+      await this.embedder.embedIntoContext(context, this.ref);
       this.modified = false;
     }
   }

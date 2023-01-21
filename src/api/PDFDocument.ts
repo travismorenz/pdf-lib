@@ -965,7 +965,7 @@ export default class PDFDocument {
     }
 
     const ref = this.context.nextRef();
-    const pdfFont = PDFFont.of(ref, this, embedder);
+    const pdfFont = PDFFont.of(ref, embedder);
     this.fonts.push(pdfFont);
 
     return pdfFont;
@@ -991,7 +991,7 @@ export default class PDFDocument {
     const embedder = StandardFontEmbedder.for(font, customName);
 
     const ref = this.context.nextRef();
-    const pdfFont = PDFFont.of(ref, this, embedder);
+    const pdfFont = PDFFont.of(ref, embedder);
     this.fonts.push(pdfFont);
 
     return pdfFont;
@@ -1329,7 +1329,7 @@ export default class PDFDocument {
 
   private async embedAll(embeddables: Embeddable[]): Promise<void> {
     for (let idx = 0, len = embeddables.length; idx < len; idx++) {
-      await embeddables[idx].embed();
+      await embeddables[idx].embed(this.context);
     }
   }
 

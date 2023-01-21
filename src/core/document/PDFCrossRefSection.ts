@@ -22,7 +22,7 @@ class PDFCrossRefSection {
 
   static createEmpty = () => new PDFCrossRefSection();
 
-  private subsections: Entry[][];
+  /*private*/ subsections: Entry[][];
   private chunkIdx: number;
   private chunkLength: number;
 

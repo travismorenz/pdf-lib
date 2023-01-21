@@ -17,7 +17,7 @@ import PDFRef from 'src/core/objects/PDFRef';
 import PDFStream from 'src/core/objects/PDFStream';
 import PDFString from 'src/core/objects/PDFString';
 import BaseParser from 'src/core/parser/BaseParser';
-import ByteStream from 'src/core/parser/ByteStream';
+import ByteStream, { IByteStream } from 'src/core/parser/ByteStream';
 import PDFContext from 'src/core/PDFContext';
 import PDFCatalog from 'src/core/structures/PDFCatalog';
 import PDFPageLeaf from 'src/core/structures/PDFPageLeaf';
@@ -38,14 +38,14 @@ class PDFObjectParser extends BaseParser {
   ) => new PDFObjectParser(ByteStream.of(bytes), context, capNumbers);
 
   static forByteStream = (
-    byteStream: ByteStream,
+    byteStream: IByteStream,
     context: PDFContext,
     capNumbers = false,
   ) => new PDFObjectParser(byteStream, context, capNumbers);
 
   protected readonly context: PDFContext;
 
-  constructor(byteStream: ByteStream, context: PDFContext, capNumbers = false) {
+  constructor(byteStream: IByteStream, context: PDFContext, capNumbers = false) {
     super(byteStream, capNumbers);
     this.context = context;
   }

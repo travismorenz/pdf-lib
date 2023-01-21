@@ -1,6 +1,6 @@
 import Embeddable from 'src/api/Embeddable';
 import PDFDocument from 'src/api/PDFDocument';
-import { JpegEmbedder, PDFRef, PngEmbedder } from 'src/core';
+import { JpegEmbedder, PDFContext, PDFRef, PngEmbedder } from 'src/core';
 import { assertIs } from 'src/utils';
 
 export type ImageEmbedder = JpegEmbedder | PngEmbedder;
@@ -124,14 +124,13 @@ export default class PDFImage implements Embeddable {
    *
    * @returns Resolves when the embedding is complete.
    */
-  async embed(): Promise<void> {
+  async embed(_context: PDFContext): Promise<void> {
     if (!this.embedder) return;
 
     // The image should only be embedded once. If there's a pending embed
     // operation then wait on it. Otherwise we need to start the embed.
     if (!this.embedTask) {
-      const { doc, ref } = this;
-      this.embedTask = this.embedder.embedIntoContext(doc.context, ref);
+      this.embedTask = this.embedder.embedIntoContext(this.doc.context, this.ref);
     }
     await this.embedTask;
 
