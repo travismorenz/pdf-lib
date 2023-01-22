@@ -124,7 +124,7 @@ class PDFWriter {
 
   protected async computeBufferSize(baseOffset: number): Promise<SerializationInfo> {
     let header: PDFHeader | undefined;
-    let size = baseOffset;
+    let size = 0;
     if (this.writeHeader) {
       header = PDFHeader.forVersion(1, 7);
       size += header.sizeInBytes() + 2;
@@ -137,12 +137,12 @@ class PDFWriter {
     for (let idx = 0, len = indirectObjects.length; idx < len; idx++) {
       const indirectObject = indirectObjects[idx];
       const [ref] = indirectObject;
-      xref.addEntry(ref, size);
+      xref.addEntry(ref, baseOffset + size);
       size += this.computeIndirectObjectSize(indirectObject);
       if (this.shouldWaitForTick(1)) await waitForTick();
     }
 
-    const xrefOffset = size;
+    const xrefOffset = baseOffset + size;
     size += xref.sizeInBytes() + 1; // '\n'
 
     const trailerDict = PDFTrailerDict.of(this.createTrailerDict());
