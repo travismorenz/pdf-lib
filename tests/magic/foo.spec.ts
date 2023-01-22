@@ -1,11 +1,8 @@
-//import { FileByteStream } from "src/core/parser/ByteStream";
-
 import {
   appendFileSync,
   copyFileSync,
   openSync,
   readFileSync,
-  writeFileSync,
   readSync,
   fstatSync,
   statSync,
@@ -13,18 +10,26 @@ import {
   constants,
 } from 'fs';
 import { degrees, drawLinesOfText, EmbedFontOptions, grayscale, PDFFont, PDFPageDrawTextOptions, StandardFonts } from 'src/api';
-// import { PageSizes, PDFDocument } from 'src/api';
 import {
-    CustomFontEmbedder, CustomFontSubsetEmbedder, PDFArray, PDFCatalog, PDFContentStream, PDFContext,
+    CustomFontEmbedder,
+    CustomFontSubsetEmbedder,
+    PDFArray,
+    PDFCatalog,
+    PDFContentStream,
+    PDFContext,
     PDFDict,
-    // PDFDict,
-    PDFHexString, PDFName, PDFNumber, PDFObject, PDFObjectParser, PDFPageLeaf,
+    PDFHexString,
+    PDFName,
+    PDFNumber,
+    PDFObject,
+    PDFObjectParser,
+    PDFPageLeaf,
     PDFParser,
-    PDFRawStream,
     PDFRef,
     PDFStream,
-    // PDFRef,
-    PDFWriter, StandardFontEmbedder } from 'src/core';
+    PDFWriter,
+    StandardFontEmbedder,
+ } from 'src/core';
 import BaseParser from 'src/core/parser/BaseParser';
 import { Keywords } from 'src/core/syntax/Keywords';
 
@@ -242,13 +247,18 @@ describe.only(`the magic`, () => {
     it(`dances the tarantella`, async () => {
         const buf = Buffer.allocUnsafe(1024);
         const testPath = './assets/pdfs/test.pdf';
+
+        // BREAK(trailer-discovery)
         let block = readFinalBlock(testPath, buf);
 
         let lastLineExt = precedingLineExtents(block);
         let xrefOffsetExt = precedingLineExtents(block, lastLineExt.start);
         let startxrefMarkerExt = precedingLineExtents(block, xrefOffsetExt.start);
+        // END(trailer-discovery)
 
         const ctx = PDFContext.create();
+
+        // BREAK(xref-parse)
         const parser = PDFObjectParser.forBytes(buf.slice(startxrefMarkerExt.start), ctx);
 
         expect(hackParser(parser).matchKeyword(Keywords.startxref)).toBe(true);
@@ -259,9 +269,25 @@ describe.only(`the magic`, () => {
         const lut: Map<PDFRef, number> = new Map();
         const trailerDict = createXrefLookupTable(ctx, stream, xrefOffset, lut);
 
+        // FIXME: pdf-lib only deals with these trailer properties, but there
+        // are more possible.  The spec says that all properties except Prev
+        // should be copied forward in incremental updates.
+        // BREAK(trailer-info)
+        ctx.trailerInfo.Encrypt = trailerDict.get(PDFName.of('Encrypt'));
+        ctx.trailerInfo.ID = trailerDict.get(PDFName.of('ID'));
+        ctx.trailerInfo.Info = trailerDict.get(PDFName.of('Info'));
+        ctx.trailerInfo.Root = trailerDict.get(PDFName.of('Root'));
+        // END(trailer-info)
+
+        // END(xref-parse)
+
+        // Update ctx.largestObjectNumber to reflect the objects we have seen in
+        // all the xref tables.
+        // BREAK(largest-object-number)
         lut.forEach((offset_, ref) =>
             ctx.largestObjectNumber = Math.max(ctx.largestObjectNumber, ref.objectNumber)
         );
+        // END(largest-object-number)
         
         function magicalRead<T = PDFObject>(s: FileByteStream, offset: number, ref: PDFRef): T {
             s.moveTo(offset);
@@ -277,7 +303,6 @@ describe.only(`the magic`, () => {
 
         const rootRef = trailerDict.get(PDFName.of('Root')) as PDFRef;
         expect(rootRef).toBeDefined();
-        // if (!(rootRef instanceof PDFRef)) throw new Error("root ref is the wrong type (or maybe it doesn't exist?)");
 
         const catalogStart = lut.get(rootRef);
         expect(catalogStart).toBeDefined();
@@ -297,52 +322,65 @@ describe.only(`the magic`, () => {
         expect(pageStart).toBeDefined();
         const page = magicalRead<PDFPageLeaf>(stream, pageStart, pageRef);
 
+        // BREAK(append-new-content-stream)
         const contentsRef = page.get(PDFName.of('Contents')) as PDFRef;
         expect(contentsRef).toBeDefined();
 
         const contentsStart = lut.get(contentsRef) as number;
         expect(contentsStart).toBeDefined();
 
-        // FIXME: probably put this back
-        // const contentsRefNextGen = contentsRef.nextGen();
-        const contentsRefNextGen = contentsRef;
-
         const contents = magicalRead(stream, contentsStart, contentsRef);
         let nextContents: PDFArray;
+        let nextContentsRef: PDFRef;
         let contentStream = PDFContentStream.of(ctx.obj({}), []);
+        const contentStreamRef = ctx.nextRef();
+        ctx.assign(contentStreamRef, contentStream);
         if (contents instanceof PDFArray) {
-            throw new Error('not implemented yet');
-        } else if (contents instanceof PDFStream) {
-            let s = contents;
-            nextContents = PDFArray.withContext(ctx);
-            nextContents.push(contentsRef);
-            const contentStreamRef = ctx.nextRef();
-            //ctx.assign(contentStreamRef, contentStream);
+            // FIXME: Untested.
+            nextContents = contents;
+            nextContentsRef = contentsRef;
             nextContents.push(contentStreamRef);
+            ctx.assign(nextContentsRef, nextContents);
+        } else if (contents instanceof PDFStream) {
+            nextContentsRef = ctx.nextRef();
+            nextContents = ctx.obj([contentsRef, contentStreamRef]);
+            ctx.assign(nextContentsRef, nextContents);
         } else {
             throw new Error(`unhandled Page.Contents type: ${contents.constructor.name}`);
         }
-        //ctx.assign(contentsRefNextGen, nextContents);
 
-        // FIXME: probably put this back
-        // page.set(PDFName.of('Contents'), contentsRefNextGen);
-        // ctx.assign(pageRef.nextGen(), page);
+        page.set(PDFName.Contents, nextContentsRef);
+        // END(append-new-content-stream)
 
-        /*
-        const contentStream = PDFContentStream.of(
-            ctx.obj({}),
-            [],
-        );
-        const streamRef = ctx.nextRef();
-        ctx.assign(streamRef, contentStream);
-        page.addContentStream(streamRef);
-        */
+        const fontData = readFileSync('./assets/fonts/ubuntu/Ubuntu-R.ttf');
+        const font = await makeFont(ctx, fontkit, fontData);
+        // const font = await makeFont(ctx, fontkit, StandardFonts.Courier);
 
-        // const fontData = readFileSync('./assets/fonts/ubuntu/Ubuntu-B.ttf');
-        // const font = await makeFont(ctx, fontkit, fontData);
-        const font = await makeFont(ctx, fontkit, StandardFonts.Courier);
-        const fontKey = page.newFontDictionary(font.name, font.ref);
+        // TODO: Any reason to wait until later?  That's how it happens in
+        // PDFDocument (during save), but I'm not sure we need to wait.
+        await font.embed(ctx);
 
+        // PDFPage.newFontDictionary call doesn't work because it depends on the
+        // whole PDF being unpacked into memory. So, the lines below replicate
+        // this behavior (not including any kind of object inheritance, which I
+        // think is a thing).
+        // FIXME: Could be ref or inline dict (or null).
+        // BREAK(font-on-page)
+        const resourcesRef = page.get(PDFName.Resources) as PDFRef;
+        const resources = magicalRead(stream, lut.get(resourcesRef)!, resourcesRef) as PDFDict;
+
+        const fontDict = resources.get(PDFName.Font) as PDFDict | undefined ?? ctx.obj({});
+        resources.set(PDFName.Font, fontDict);
+        const fontKey = fontDict.uniqueKey(font.name);
+        fontDict.set(fontKey, font.ref);
+
+        ctx.assign(resourcesRef, resources);
+        // END(font-on-page)
+
+        // NOTE: These ctx.assign of things that seem to already exist are so
+        // they exist in the indirect object list in PDFContext, and will then
+        // be written when serializing.  It might be good to have some kind of
+        // `markDirty` helper that communicates the intent more clearly.
         ctx.assign(pageRef, page);
 
         contentStream.push(
@@ -356,20 +394,12 @@ describe.only(`the magic`, () => {
             })
         );
 
-        await font.embed(ctx);
-
         const outbuf = await PDFWriter.forContext(ctx, 50, false).serializeToBuffer(statSync(testPath).size);
 
         const outPath = './yowza.pdf';
         copyFileSync(testPath, outPath);
         appendFileSync(outPath, outbuf);
-        // expect(Buffer.from(buf).toString('ascii')).toBe('bonk');
     });
-
-    // import fontkit from "@pdf-lib/fontkit";
-    // doc.registerFontkit(fontkit);
-    // const fontBytes = await fetch(fontUrl).then((res) => res.arrayBuffer());
-    // const font = await doc.embedFont(fontBytes);
 
     // write derived Page object, modifying Contents
     // - read page object -> PDFPageLeaf
@@ -427,6 +457,7 @@ function createXrefLookupTable(
     return trailerDict;
 }
 
+// FIXME: Stolen from PDFDocument.embedFont. Share somehow?
 async function makeFont(
     context: PDFContext,
     fontkit: Fontkit,
@@ -463,6 +494,7 @@ async function makeFont(
     return pdfFont;
 }
 
+// FIXME: Silly name.
 interface MyPDFPageDrawTextOptions extends PDFPageDrawTextOptions {
     font: PDFFont;
     fontKey: PDFName;
@@ -471,6 +503,7 @@ interface MyPDFPageDrawTextOptions extends PDFPageDrawTextOptions {
     lineHeight: number;
 }
 
+// FIXME: Stolen from PDFPage.drawText. Share somehow?
 function drawText(
     text: string,
     options: MyPDFPageDrawTextOptions,
