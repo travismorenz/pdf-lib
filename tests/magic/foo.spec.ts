@@ -163,32 +163,6 @@ describe.only(`the magic`, () => {
         ).toEqual(inspect('startxref'));
     });
 
-    it(`round two`, () => {
-        const buf = Buffer.allocUnsafe(1024);
-        let block = readFinalBlock('./assets/pdfs/test.pdf', buf);
-
-        let lastLineExt = precedingLineExtents(block);
-        let xrefOffsetExt = precedingLineExtents(block, lastLineExt.start);
-        let startxrefMarkerExt = precedingLineExtents(block, xrefOffsetExt.start);
-
-        const ctx = PDFContext.create();
-        const parser = PDFObjectParser.forBytes(buf.slice(startxrefMarkerExt.start), ctx);
-
-        expect(hackParser(parser).matchKeyword(Keywords.startxref)).toBe(true);
-        const xrefOffset = parser.parseObject();
-        expect(xrefOffset).toBeInstanceOf(PDFNumber);
-        expect((xrefOffset as PDFNumber).asNumber()).toEqual(173);
-        expect(hackParser(parser).matchKeyword(Keywords.eof));
-    });
-
-    // it(`new crazy`, async () => {
-    //     const doc = await PDFDocument.create();
-    //     const page = doc.addPage(PageSizes.Letter);
-    //     page.moveTo(10, 10);
-    //     page.drawText("testing 123", { size: 36 });
-    //     writeFileSync('./amazing.pdf', await doc.save());
-    // });
-
     it(`reads a final line terminated by EOF`, () => {
         const buffer = Buffer.from('%%EOF', 'ascii');
         const block: Block = {
@@ -201,47 +175,6 @@ describe.only(`the magic`, () => {
             start: 0,
             end: 5,
         });
-    });
-
-    it(`makes my head hurt`, async () => {
-        const ctx = PDFContext.create();
-
-        // Page (PDFPageLeaf)
-        // Font (via context.lookup)
-        // ContentStream
-
-        // NOTE: In the real one, we'll read the PDFPageLeaf, not create it.
-        const page = PDFPageLeaf.fromMapWithContext(new Map(), ctx);
-        const pageRef = ctx.nextRef();
-        ctx.assign(pageRef, page);
-
-        const stream = PDFContentStream.of(
-            ctx.obj({}),
-            [],
-        );
-        const streamRef = ctx.nextRef();
-        ctx.assign(streamRef, stream);
-        page.addContentStream(streamRef);
-
-        // const fontData = readFileSync('./assets/fonts/ubuntu/Ubuntu-B.ttf');
-        // const font = await makeFont(ctx, fontkit, fontData);
-        // const fontKey = page.newFontDictionary(font.name, font.ref);
-
-        // stream.push(
-        //     ...drawText('hello\nfriend', {
-        //         font,
-        //         fontKey,
-        //         lineHeight: 20,
-        //         size: 14,
-        //         x: 10,
-        //         y: 100,
-        //     })
-        // );
-
-        // await font.embed(ctx);
-
-        const buf = await PDFWriter.forContext(ctx, 50, false).serializeToBuffer(12345);
-        // expect(Buffer.from(buf).toString('ascii')).toBe('bonk');
     });
 
     it(`dances the tarantella`, async () => {
