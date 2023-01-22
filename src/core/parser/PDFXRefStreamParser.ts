@@ -7,6 +7,7 @@ import PDFRawStream from 'src/core/objects/PDFRawStream';
 import PDFRef from 'src/core/objects/PDFRef';
 import ByteStream from 'src/core/parser/ByteStream';
 import PDFContext from 'src/core/PDFContext';
+import { assertIs } from 'src/utils';
 
 export interface Entry {
   ref: PDFRef;
@@ -64,8 +65,11 @@ class PDFXRefStreamParser {
     }
     this.alreadyParsed = true;
 
+    const root = this.dict.get(PDFName.of('Root')) as PDFRef | undefined;
+    assertIs(root, 'Root', [[PDFRef, 'PDFRef'], 'undefined']);
+
     this.context.trailerInfo = {
-      Root: this.dict.get(PDFName.of('Root')),
+      Root: root,
       Encrypt: this.dict.get(PDFName.of('Encrypt')),
       Info: this.dict.get(PDFName.of('Info')),
       ID: this.dict.get(PDFName.of('ID')),
