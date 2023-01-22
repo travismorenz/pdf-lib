@@ -226,3 +226,29 @@ export const assertPositive = (value: number, valueName: string) => {
     throw new Error(`${backtick(valueName)} must be a positive number or 0, but was actually ${value}`);
   }
 };
+
+export function isOfType<T extends object>(
+    type: Function & { prototype: T },
+    obj: any,
+): obj is T {
+    return obj instanceof type;
+}
+
+export function assertOfType<T extends object>(
+    type: Function & { prototype: T },
+    obj: any,
+): asserts obj is T {
+    if (!isOfType(type, obj)) {
+        throw new Error(`Expecting instance of ${type.name}`);
+    }
+}
+
+export function requireOfType<T extends object>(
+    type: Function & { prototype: T },
+    obj: any,
+): T {
+    if (!isOfType(type, obj)) {
+        throw new Error(`Expecting instance of ${type.name}`);
+    }
+    return obj;
+}

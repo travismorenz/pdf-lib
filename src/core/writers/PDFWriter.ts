@@ -113,6 +113,9 @@ class PDFWriter {
   }
 
   protected createTrailerDict(): PDFDict {
+    // FIXME: Needs to be able to accept a value for Prev.
+    // See PDF Spec 1.7 section 7.5.5 File Trailer.  (The value of Prev is the
+    // location of that last xref table in an existing file.)
     return this.context.obj({
       Size: this.context.largestObjectNumber + 1,
       Root: this.context.trailerInfo.Root,

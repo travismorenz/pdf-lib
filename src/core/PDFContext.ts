@@ -50,7 +50,7 @@ class PDFContext {
   largestObjectNumber: number;
   header: PDFHeader;
   trailerInfo: {
-    Root?: PDFObject;
+    Root?: PDFRef; // guaranteed by the spec to be a PDFRef
     Encrypt?: PDFObject;
     Info?: PDFObject;
     ID?: PDFObject;
